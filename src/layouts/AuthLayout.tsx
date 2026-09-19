@@ -5,7 +5,7 @@ import { Link } from "@tanstack/react-router"
 function AuthLayout({ children }: { children: React.ReactNode }) {
     const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
     return (
-        <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-4 border border-gray-200 p-4">
+        <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col gap-4 p-4">
             {isAuthenticated && <>{children}</>}
             {!isAuthenticated && (
                 <div>

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button.tsx"
 import { Link, useNavigate } from "@tanstack/react-router"
 import { memo, useMemo, useState } from "react"
 import { Api } from "@/lib/utils.ts"
-import { useAuthStore } from "@/stores/auth.ts"
 
 const RegisterButtonLink = memo(() => {
     return (
@@ -23,9 +22,9 @@ function LoginForm() {
 
     const navigate = useNavigate({ from: "/login" })
 
-    const setAuthenticated = useAuthStore((state) => state.setAuthenticated)
+    // const setAuthenticated = useAuthStore((state) => state.setAuthenticated)
     // const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-    const setToken = useAuthStore((state) => state.setToken)
+    // const setToken = useAuthStore((state) => state.setToken)
 
     const validateForm = useMemo((): string[] => {
         const errors = []
@@ -38,9 +37,7 @@ function LoginForm() {
 
     const login = async (): Promise<void> => {
         try {
-            const res = await Api.login(username, password)
-            setAuthenticated()
-            setToken(res.data.token)
+            await Api.login(username, password)
             await navigate({ to: "/" })
         } catch (error) {
             alert(error)

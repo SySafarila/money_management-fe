@@ -1,4 +1,5 @@
 import axios from "axios"
+import { useAuthStore } from "@/stores/auth.ts"
 
 export { cn } from "cn"
 
@@ -64,27 +65,29 @@ export class Api {
             username,
             password,
         })
+        const state = useAuthStore.getState()
+        state.setAuthenticated()
+        state.setToken(res.data.data.token)
         return res.data
     }
 
-    static async getTransactions(token: string) {
+    static async getTransactions() {
         return await api.get<TransactionsResponse>("/transactions", {
             headers: {
-                "x-api-key": token,
+                "x-api-key": useAuthStore.getState().token,
             },
         })
     }
 
-    static async getCategories(token: string) {
+    static async getCategories() {
         return await api.get<CategoriesResponse>("/categories", {
             headers: {
-                "x-api-key": token,
+                "x-api-key": useAuthStore.getState().token,
             },
         })
     }
 
     static async createCategory(
-        token: string,
         category: string
     ): Promise<CreateCategoryResponse> {
         return await api.post(
@@ -94,19 +97,16 @@ export class Api {
             },
             {
                 headers: {
-                    "x-api-key": token,
+                    "x-api-key": useAuthStore.getState().token,
                 },
             }
         )
     }
 
-    static async createTransaction(
-        token: string,
-        transaction: TransactionCreateParam
-    ) {
+    static async createTransaction(transaction: TransactionCreateParam) {
         return await api.post("/transactions", transaction, {
             headers: {
-                "x-api-key": token,
+                "x-api-key": useAuthStore.getState().token,
             },
         })
     }
