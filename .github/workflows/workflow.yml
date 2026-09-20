@@ -25,14 +25,14 @@ jobs:
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/money_management-frontend:latest
 
-#      - name: Deploy to server
-#        uses: appleboy/ssh-action@v1
-#        with:
-#          host: ${{ secrets.SSH_HOST }}
-#          username: ${{ secrets.SSH_USERNAME }}
-#          key: ${{ secrets.SSH_PRIVATE_KEY }}
-#          port: ${{ secrets.SSH_PORT }}
-#          script: |
-#            whoami
-#            cd /root/projects/money-management
-#            sh pull_image.sh
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            whoami
+            cd /root/projects/money-management
+            sh pull_fe.sh
