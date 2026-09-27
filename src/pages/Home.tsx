@@ -36,6 +36,13 @@ import {
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 
 export function Home() {
+    const [selectedDeleteTransactionId, setSelectedDeleteTransactionId] =
+        useState<string | null>(null)
+    const [isDeleting, setIsDeleting] = useState<boolean>(false)
+    const [isEditMode, setIsEditMode] = useState<boolean>(false)
+    const [selectedEditTransactionId, setSelectedEditTransactionId] = useState<
+        string | null
+    >(null)
     const [category, setCategory] = useState<string>("")
     const [categories, setCategories] = useState<Category[]>([])
     const [transactions, setTransactions] = useState<
@@ -110,6 +117,61 @@ export function Home() {
         })
     }
 
+    const editTransaction = (transaction: Transaction) => {
+        setIsEditMode(true)
+        setSelectedEditTransactionId(transaction.id)
+        setDescription(transaction.description)
+        setAmount(transaction.amount)
+        setDate(new Date(transaction.date))
+        setCategoryId(transaction.category_id)
+        setIsIncome(transaction.is_income)
+    }
+
+    const updateTransaction = async () => {
+        try {
+            setLoadingCreate(true)
+            await Api.updateTransaction(selectedEditTransactionId!, {
+                amount: amount,
+                description: description,
+                category_id: categoryId,
+                is_income: isIncome,
+                date: date!.toISOString(),
+            })
+        } catch (error) {
+            alert(error)
+        }
+        setLoadingCreate(false)
+        setIsEditMode(false)
+        setDescription("")
+        setAmount(0)
+        setDate(undefined)
+        setCategoryId("")
+        setIsIncome(false)
+        getTransactions().then((r) => {
+            setTransactions(r.data.data)
+            setIsLoadingTransactions(false)
+        })
+    }
+
+    const deleteTransaction = async (transaction: Transaction) => {
+        if (selectedDeleteTransactionId === transaction.id) {
+            try {
+                setIsDeleting(true)
+                await Api.deleteTransaction(selectedDeleteTransactionId)
+                setSelectedDeleteTransactionId(null)
+            } catch (e) {
+                alert(e)
+            }
+            setIsDeleting(false)
+            getTransactions().then((r) => {
+                setTransactions(r.data.data)
+                setIsLoadingTransactions(false)
+            })
+        } else {
+            setSelectedDeleteTransactionId(transaction.id)
+        }
+    }
+
     useEffect(() => {
         getTransactions().then((r) => {
             setTransactions(r.data.data)
@@ -154,6 +216,7 @@ export function Home() {
                                         onValueChange={(value) =>
                                             setCategoryId(String(value))
                                         }
+                                        value={categoryId}
                                     >
                                         <SelectTrigger className="w-full">
                                             <SelectValue placeholder="Category" />
@@ -257,14 +320,41 @@ export function Home() {
                                 </Popover>
                             </Field>
                         </div>
-                        <Button
-                            onClick={createTransaction}
-                            disabled={createTransactionValidation.length > 0}
-                        >
-                            {loadingCreate
-                                ? "Creating..."
-                                : "Create New Transaction"}
-                        </Button>
+                        {isEditMode && (
+                            <>
+                                <Button
+                                    onClick={() => setIsEditMode(false)}
+                                    disabled={loadingCreate}
+                                    variant="destructive"
+                                >
+                                    Cancel Update
+                                </Button>
+                                <Button
+                                    onClick={updateTransaction}
+                                    disabled={
+                                        createTransactionValidation.length >
+                                            0 || loadingCreate
+                                    }
+                                >
+                                    {loadingCreate
+                                        ? "Updating..."
+                                        : "Update Transaction"}
+                                </Button>
+                            </>
+                        )}
+                        {!isEditMode && (
+                            <Button
+                                onClick={createTransaction}
+                                disabled={
+                                    createTransactionValidation.length > 0 ||
+                                    loadingCreate
+                                }
+                            >
+                                {loadingCreate
+                                    ? "Creating..."
+                                    : "Create New Transaction"}
+                            </Button>
+                        )}
                         {/*<p>{createTransactionValidation}</p>*/}
                     </div>
                     {isLoadingTransactions && (
@@ -320,7 +410,7 @@ export function Home() {
                                                                 )}
                                                             </span>
                                                             <div className="flex gap-2">
-                                                                <Badge>
+                                                                <Badge variant="secondary">
                                                                     {
                                                                         transaction
                                                                             .category
@@ -330,7 +420,7 @@ export function Home() {
                                                                 <Badge
                                                                     variant={
                                                                         transaction.is_income
-                                                                            ? "secondary"
+                                                                            ? "default"
                                                                             : "destructive"
                                                                     }
                                                                 >
@@ -343,17 +433,54 @@ export function Home() {
                                                     </CardHeader>
                                                     <CardFooter className="flex justify-between gap-2">
                                                         <div className="flex gap-2">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                            >
-                                                                Edit
-                                                            </Button>
+                                                            {selectedDeleteTransactionId ===
+                                                                transaction.id && (
+                                                                <Button
+                                                                    variant="secondary"
+                                                                    size="sm"
+                                                                    onClick={() =>
+                                                                        setSelectedDeleteTransactionId(
+                                                                            null
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        isDeleting
+                                                                    }
+                                                                >
+                                                                    Cancel
+                                                                    Delete
+                                                                </Button>
+                                                            )}
+                                                            {selectedDeleteTransactionId !==
+                                                                transaction.id && (
+                                                                <Button
+                                                                    variant="secondary"
+                                                                    size="sm"
+                                                                    onClick={() =>
+                                                                        editTransaction(
+                                                                            transaction
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Edit
+                                                                </Button>
+                                                            )}
                                                             <Button
                                                                 size="sm"
                                                                 variant="destructive"
+                                                                onClick={() =>
+                                                                    deleteTransaction(
+                                                                        transaction
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isDeleting
+                                                                }
                                                             >
-                                                                Delete
+                                                                {selectedDeleteTransactionId ===
+                                                                transaction.id
+                                                                    ? "Click Again To Delete"
+                                                                    : "Delete"}
                                                             </Button>
                                                         </div>
                                                         <span>

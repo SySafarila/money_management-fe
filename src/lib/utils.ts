@@ -110,4 +110,23 @@ export class Api {
             },
         })
     }
+
+    static async updateTransaction(
+        id: string,
+        transaction: TransactionCreateParam
+    ) {
+        return await api.patch(`/transactions/${id}`, transaction, {
+            headers: {
+                "x-api-key": useAuthStore.getState().token,
+            },
+        })
+    }
+
+    static async deleteTransaction(id: string) {
+        return await api.delete(`/transactions/${id}`, {
+            headers: {
+                "x-api-key": useAuthStore.getState().token,
+            },
+        })
+    }
 }
