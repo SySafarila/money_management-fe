@@ -436,9 +436,7 @@ export function Home() {
                                                             <div className="flex gap-2">
                                                                 <Badge variant="secondary">
                                                                     {
-                                                                        transaction
-                                                                            .category
-                                                                            .name
+                                                                        transaction.category ? transaction.category.name : "Uncategorized"
                                                                     }
                                                                 </Badge>
                                                                 <Badge
