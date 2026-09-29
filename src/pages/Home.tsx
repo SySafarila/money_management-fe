@@ -1,6 +1,6 @@
 import AuthLayout from "@/layouts/AuthLayout.tsx"
 import { Api, type Category, type Transaction } from "@/lib/utils.ts"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import { Field, FieldLabel } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -34,6 +34,8 @@ import {
     TabsTrigger,
 } from "@/components/ui/tabs.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
+import { CategoryManager } from "@/components/internal/CategoryManager.tsx"
+import { Tag, Receipt } from "lucide-react"
 
 export function Home() {
     const [selectedDeleteTransactionId, setSelectedDeleteTransactionId] =
@@ -43,7 +45,6 @@ export function Home() {
     const [selectedEditTransactionId, setSelectedEditTransactionId] = useState<
         string | null
     >(null)
-    const [category, setCategory] = useState<string>("")
     const [categories, setCategories] = useState<Category[]>([])
     const [transactions, setTransactions] = useState<
         Record<string, Transaction[]>
@@ -58,12 +59,14 @@ export function Home() {
     const [date, setDate] = useState<Date>()
     const [categoryId, setCategoryId] = useState<string>("")
     const [loadingCreate, setLoadingCreate] = useState<boolean>(false)
-    const categoriesSelect = categories.map((category) => {
-        return {
+
+    const categoriesSelect = useMemo(() => {
+        return categories.map((category) => ({
             label: category.name,
             value: category.id,
-        }
-    })
+        }))
+    }, [categories])
+
     const isIncomeSelect = [
         {
             label: "Income",
@@ -79,19 +82,6 @@ export function Home() {
         return await Api.getTransactions()
     }
 
-    const getCategories = async () => {
-        return await Api.getCategories()
-    }
-
-    const createCategories = async () => {
-        setLoadingCreate(true)
-        await Api.createCategory(category)
-        setCategory("")
-        const categories = await getCategories()
-        setCategories(categories.data.data)
-        setLoadingCreate(false)
-    }
-
     const createTransactionValidation = useMemo(() => {
         const errors: string[] = []
 
@@ -104,17 +94,27 @@ export function Home() {
     }, [amount, description, categoryId, date])
 
     const createTransaction = async () => {
-        await Api.createTransaction({
-            amount: amount,
-            description: description,
-            category_id: categoryId,
-            is_income: isIncome,
-            date: date!.toISOString(),
-        })
-        getTransactions().then((r) => {
+        try {
+            setLoadingCreate(true)
+            await Api.createTransaction({
+                amount: amount,
+                description: description,
+                category_id: categoryId,
+                is_income: isIncome,
+                date: date!.toISOString(),
+            })
+            const r = await getTransactions()
             setTransactions(r.data.data)
-            setIsLoadingTransactions(false)
-        })
+            setDescription("")
+            setAmount(0)
+            setDate(undefined)
+            setCategoryId("")
+            setIsIncome(false)
+        } catch (error) {
+            alert(error)
+        } finally {
+            setLoadingCreate(false)
+        }
     }
 
     const editTransaction = (transaction: Transaction) => {
@@ -137,20 +137,20 @@ export function Home() {
                 is_income: isIncome,
                 date: date!.toISOString(),
             })
+            const r = await getTransactions()
+            setTransactions(r.data.data)
+            setIsEditMode(false)
+            setSelectedEditTransactionId(null)
+            setDescription("")
+            setAmount(0)
+            setDate(undefined)
+            setCategoryId("")
+            setIsIncome(false)
         } catch (error) {
             alert(error)
+        } finally {
+            setLoadingCreate(false)
         }
-        setLoadingCreate(false)
-        setIsEditMode(false)
-        setDescription("")
-        setAmount(0)
-        setDate(undefined)
-        setCategoryId("")
-        setIsIncome(false)
-        getTransactions().then((r) => {
-            setTransactions(r.data.data)
-            setIsLoadingTransactions(false)
-        })
     }
 
     const deleteTransaction = async (transaction: Transaction) => {
@@ -159,47 +159,68 @@ export function Home() {
                 setIsDeleting(true)
                 await Api.deleteTransaction(selectedDeleteTransactionId)
                 setSelectedDeleteTransactionId(null)
+                const r = await getTransactions()
+                setTransactions(r.data.data)
             } catch (e) {
                 alert(e)
+            } finally {
+                setIsDeleting(false)
             }
-            setIsDeleting(false)
-            getTransactions().then((r) => {
-                setTransactions(r.data.data)
-                setIsLoadingTransactions(false)
-            })
         } else {
             setSelectedDeleteTransactionId(transaction.id)
         }
     }
 
+    const handleCategoriesUpdated = useCallback((updatedList: Category[]) => {
+        setCategories(updatedList)
+        setIsLoadingCategories(false)
+    }, [])
+
     useEffect(() => {
-        getTransactions().then((r) => {
-            setTransactions(r.data.data)
-            setIsLoadingTransactions(false)
-        })
-        getCategories().then((r) => {
-            setCategories(r.data.data)
-            setIsLoadingCategories(false)
-        })
+        getTransactions()
+            .then((r) => {
+                setTransactions(r.data.data)
+                setIsLoadingTransactions(false)
+            })
+            .catch(() => setIsLoadingTransactions(false))
     }, [])
 
     return (
         <AuthLayout>
-            <Tabs defaultValue="transactions">
-                <TabsList className="w-full" variant="line">
+            <Tabs defaultValue="categories" className="w-full">
+                <TabsList className="grid w-full grid-cols-2" variant="line">
+                    <TabsTrigger
+                        value="categories"
+                        className="cursor-pointer gap-2"
+                    >
+                        <Tag className="h-4 w-4" />
+                        <span>Categories</span>
+                        {categories.length > 0 && (
+                            <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                {categories.length}
+                            </span>
+                        )}
+                    </TabsTrigger>
                     <TabsTrigger
                         value="transactions"
-                        className="cursor-pointer"
+                        className="cursor-pointer gap-2"
                     >
-                        Transactions
-                    </TabsTrigger>
-                    <TabsTrigger value="categories" className="cursor-pointer">
-                        Categories
+                        <Receipt className="h-4 w-4" />
+                        <span>Transactions</span>
                     </TabsTrigger>
                 </TabsList>
+
+                {/* Categories Tab Content */}
+                <TabsContent value="categories" className="mt-4">
+                    <CategoryManager
+                        onCategoriesUpdated={handleCategoriesUpdated}
+                    />
+                </TabsContent>
+
+                {/* Transactions Tab Content */}
                 <TabsContent
                     value="transactions"
-                    className="flex flex-col gap-4"
+                    className="mt-4 flex flex-col gap-4"
                 >
                     <div className="flex flex-col gap-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -219,7 +240,7 @@ export function Home() {
                                         value={categoryId}
                                     >
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Category" />
+                                            <SelectValue placeholder="Select Category" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectGroup>
@@ -272,7 +293,7 @@ export function Home() {
                             <Input
                                 id="description"
                                 type="text"
-                                placeholder="Enter your description"
+                                placeholder="Enter description"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                             />
@@ -283,7 +304,7 @@ export function Home() {
                                 <Input
                                     id="amount"
                                     type="number"
-                                    placeholder="Enter your amount"
+                                    placeholder="Enter amount"
                                     value={amount}
                                     onChange={(e) =>
                                         setAmount(Number(e.target.value))
@@ -302,7 +323,6 @@ export function Home() {
                                             />
                                         }
                                     >
-                                        {/*<CalendarIcon />*/}
                                         {date ? (
                                             format(date, "PPP")
                                         ) : (
@@ -321,11 +341,15 @@ export function Home() {
                             </Field>
                         </div>
                         {isEditMode && (
-                            <>
+                            <div className="flex gap-2">
                                 <Button
-                                    onClick={() => setIsEditMode(false)}
+                                    onClick={() => {
+                                        setIsEditMode(false)
+                                        setSelectedEditTransactionId(null)
+                                    }}
                                     disabled={loadingCreate}
-                                    variant="destructive"
+                                    variant="secondary"
+                                    className="flex-1"
                                 >
                                     Cancel Update
                                 </Button>
@@ -335,12 +359,13 @@ export function Home() {
                                         createTransactionValidation.length >
                                             0 || loadingCreate
                                     }
+                                    className="flex-1"
                                 >
                                     {loadingCreate
                                         ? "Updating..."
                                         : "Update Transaction"}
                                 </Button>
-                            </>
+                            </div>
                         )}
                         {!isEditMode && (
                             <Button
@@ -355,7 +380,6 @@ export function Home() {
                                     : "Create New Transaction"}
                             </Button>
                         )}
-                        {/*<p>{createTransactionValidation}</p>*/}
                     </div>
                     {isLoadingTransactions && (
                         <Card>
@@ -385,25 +409,25 @@ export function Home() {
                     {!isLoadingTransactions && (
                         <div>
                             {Object.entries(transactions).map(
-                                ([date, items]) => (
+                                ([dateKey, items]) => (
                                     <div
-                                        key={date}
-                                        className="flex flex-col gap-4"
+                                        key={dateKey}
+                                        className="mb-4 flex flex-col gap-3"
                                     >
-                                        <Badge>{date}</Badge>
-                                        <div className="flex flex-col gap-4">
+                                        <Badge variant="outline">
+                                            {dateKey}
+                                        </Badge>
+                                        <div className="flex flex-col gap-3">
                                             {items.map((transaction) => (
                                                 <Card key={transaction.id}>
                                                     <CardHeader>
                                                         <CardTitle>
-                                                            "
                                                             {
                                                                 transaction.description
                                                             }
-                                                            "
                                                         </CardTitle>
                                                         <CardDescription className="flex justify-between">
-                                                            <span>
+                                                            <span className="font-semibold text-foreground">
                                                                 Rp{" "}
                                                                 {transaction.amount.toLocaleString(
                                                                     "id-ID"
@@ -448,7 +472,6 @@ export function Home() {
                                                                     }
                                                                 >
                                                                     Cancel
-                                                                    Delete
                                                                 </Button>
                                                             )}
                                                             {selectedDeleteTransactionId !==
@@ -483,48 +506,18 @@ export function Home() {
                                                                     : "Delete"}
                                                             </Button>
                                                         </div>
-                                                        <span>
+                                                        <span className="text-xs text-muted-foreground">
                                                             {transaction.date}
                                                         </span>
                                                     </CardFooter>
                                                 </Card>
                                             ))}
-                                        </div>{" "}
+                                        </div>
                                     </div>
                                 )
                             )}
                         </div>
                     )}
-                </TabsContent>
-                <TabsContent value="categories">
-                    <div className="flex flex-col gap-2">
-                        <span>Categories</span>
-                        <div className="flex flex-wrap gap-2">
-                            {categories.map((category) => (
-                                <Badge>{category.name}</Badge>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                        <Field>
-                            <FieldLabel htmlFor="category">Category</FieldLabel>
-                            <Input
-                                id="category"
-                                type="text"
-                                placeholder="Enter your category"
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                            />
-                        </Field>
-                        <Button
-                            onClick={createCategories}
-                            disabled={category.length === 0 || loadingCreate}
-                        >
-                            {loadingCreate
-                                ? "Creating..."
-                                : "Create New Category"}
-                        </Button>
-                    </div>
                 </TabsContent>
             </Tabs>
         </AuthLayout>

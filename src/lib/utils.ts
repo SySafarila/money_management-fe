@@ -4,7 +4,17 @@ import { useAuthStore } from "@/stores/auth.ts"
 export { cn } from "cn"
 
 export const api = axios.create({
-    baseURL: "https://money-management-api.fsm.web.id",
+    baseURL:
+        import.meta.env.VITE_API_URL || "https://money-management-api.fsm.web.id",
+})
+
+// Attach x-api-key to every outgoing request
+api.interceptors.request.use((config) => {
+    const token = useAuthStore.getState().token
+    if (token) {
+        config.headers["x-api-key"] = token
+    }
+    return config
 })
 
 type LoginResponse = {
@@ -20,17 +30,22 @@ export type Category = {
     updated_at: string
 }
 
-type CreateCategoryResponse = {
+export type CategoryResponse = {
     message: string
     data: Category
 }
 
-type CategoriesResponse = {
+export type CategoriesResponse = {
     message: string
     data: Category[]
 }
 
-type TransactionCreateParam = {
+export type DeleteCategoryResponse = {
+    message: string
+    data: null
+}
+
+export type TransactionCreateParam = {
     category_id: string
     amount: number
     description: string
@@ -51,7 +66,7 @@ export interface Transaction {
     category: Category
 }
 
-type TransactionsResponse = {
+export type TransactionsResponse = {
     message: string
     data: Record<string, Transaction[]>
 }
@@ -66,67 +81,59 @@ export class Api {
             password,
         })
         const state = useAuthStore.getState()
-        state.setAuthenticated()
         state.setToken(res.data.data.token)
+        state.setAuthenticated()
         return res.data
     }
 
     static async getTransactions() {
-        return await api.get<TransactionsResponse>("/transactions", {
-            headers: {
-                "x-api-key": useAuthStore.getState().token,
-            },
-        })
-    }
-
-    static async getCategories() {
-        return await api.get<CategoriesResponse>("/categories", {
-            headers: {
-                "x-api-key": useAuthStore.getState().token,
-            },
-        })
-    }
-
-    static async createCategory(
-        category: string
-    ): Promise<CreateCategoryResponse> {
-        return await api.post(
-            `/categories`,
-            {
-                name: category,
-            },
-            {
-                headers: {
-                    "x-api-key": useAuthStore.getState().token,
-                },
-            }
-        )
+        return await api.get<TransactionsResponse>("/transactions")
     }
 
     static async createTransaction(transaction: TransactionCreateParam) {
-        return await api.post("/transactions", transaction, {
-            headers: {
-                "x-api-key": useAuthStore.getState().token,
-            },
-        })
+        return await api.post("/transactions", transaction)
     }
 
     static async updateTransaction(
         id: string,
         transaction: TransactionCreateParam
     ) {
-        return await api.patch(`/transactions/${id}`, transaction, {
-            headers: {
-                "x-api-key": useAuthStore.getState().token,
-            },
-        })
+        return await api.patch(`/transactions/${id}`, transaction)
     }
 
     static async deleteTransaction(id: string) {
-        return await api.delete(`/transactions/${id}`, {
-            headers: {
-                "x-api-key": useAuthStore.getState().token,
-            },
+        return await api.delete(`/transactions/${id}`)
+    }
+
+    static async getCategories() {
+        return await api.get<CategoriesResponse>("/categories")
+    }
+
+    static async getCategory(id: string) {
+        return await api.get<CategoryResponse>(`/categories/${id}`)
+    }
+
+    static async createCategory(
+        categoryName: string
+    ): Promise<CategoryResponse> {
+        const res = await api.post<CategoryResponse>("/categories", {
+            name: categoryName.trim(),
         })
+        return res.data
+    }
+
+    static async updateCategory(
+        id: string,
+        categoryName: string
+    ): Promise<CategoryResponse> {
+        const res = await api.patch<CategoryResponse>(`/categories/${id}`, {
+            name: categoryName.trim(),
+        })
+        return res.data
+    }
+
+    static async deleteCategory(id: string): Promise<DeleteCategoryResponse> {
+        const res = await api.delete<DeleteCategoryResponse>(`/categories/${id}`)
+        return res.data
     }
 }
