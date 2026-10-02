@@ -214,6 +214,7 @@ export function Home() {
                 <TabsContent value="categories" className="mt-4">
                     <CategoryManager
                         onCategoriesUpdated={handleCategoriesUpdated}
+                        transactions={transactions}
                     />
                 </TabsContent>
 

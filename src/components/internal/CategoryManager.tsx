@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react"
-import { Api, type Category } from "@/lib/utils.ts"
+import { Api, type Category, type Transaction } from "@/lib/utils.ts"
 import { Button } from "@/components/ui/button.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Badge } from "@/components/ui/badge.tsx"
@@ -29,11 +29,36 @@ import { format } from "date-fns"
 
 interface CategoryManagerProps {
     onCategoriesUpdated?: (categories: Category[]) => void
+    transactions?: Record<string, Transaction[]>
 }
 
 type SortOption = "newest" | "oldest" | "name_asc" | "name_desc"
 
-export function CategoryManager({ onCategoriesUpdated }: CategoryManagerProps) {
+export function CategoryManager({
+    onCategoriesUpdated,
+    transactions = {},
+}: CategoryManagerProps) {
+    // Compute total expense & income per category from all transactions
+    const categorySpending = useMemo(() => {
+        const map: Record<
+            string,
+            { expense: number; income: number; count: number }
+        > = {}
+        for (const dayTransactions of Object.values(transactions)) {
+            for (const tx of dayTransactions) {
+                if (!map[tx.category_id]) {
+                    map[tx.category_id] = { expense: 0, income: 0, count: 0 }
+                }
+                map[tx.category_id].count += 1
+                if (tx.is_income) {
+                    map[tx.category_id].income += tx.amount
+                } else {
+                    map[tx.category_id].expense += tx.amount
+                }
+            }
+        }
+        return map
+    }, [transactions])
     const [categories, setCategories] = useState<Category[]>([])
     const [isLoading, setIsLoading] = useState<boolean>(true)
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
@@ -497,7 +522,7 @@ export function CategoryManager({ onCategoriesUpdated }: CategoryManagerProps) {
                                             </Button>
                                         </div>
                                     ) : (
-                                        <div className="flex flex-col">
+                                        <div className="flex flex-col gap-1">
                                             <span className="font-medium text-foreground">
                                                 {item.name}
                                             </span>
@@ -512,6 +537,51 @@ export function CategoryManager({ onCategoriesUpdated }: CategoryManagerProps) {
                                                       )
                                                     : "N/A"}
                                             </span>
+                                            {/* Spending summary */}
+                                            {categorySpending[item.id] ? (
+                                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                                    {categorySpending[item.id]
+                                                        .expense > 0 && (
+                                                        <span className="inline-flex items-center gap-0.5 rounded-md bg-destructive/10 px-1.5 py-0.5 text-[10px] font-medium text-destructive">
+                                                            <span>↓</span>
+                                                            <span>
+                                                                Rp{" "}
+                                                                {categorySpending[
+                                                                    item.id
+                                                                ].expense.toLocaleString(
+                                                                    "id-ID"
+                                                                )}
+                                                            </span>
+                                                        </span>
+                                                    )}
+                                                    {categorySpending[item.id]
+                                                        .income > 0 && (
+                                                        <span className="inline-flex items-center gap-0.5 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
+                                                            <span>↑</span>
+                                                            <span>
+                                                                Rp{" "}
+                                                                {categorySpending[
+                                                                    item.id
+                                                                ].income.toLocaleString(
+                                                                    "id-ID"
+                                                                )}
+                                                            </span>
+                                                        </span>
+                                                    )}
+                                                    <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                                        {
+                                                            categorySpending[
+                                                                item.id
+                                                            ].count
+                                                        }{" "}
+                                                        transaksi
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="mt-0.5 text-[10px] italic text-muted-foreground/60">
+                                                    Belum ada transaksi
+                                                </span>
+                                            )}
                                         </div>
                                     )}
                                 </div>
