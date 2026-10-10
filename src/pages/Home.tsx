@@ -1,6 +1,6 @@
 import AuthLayout from "@/layouts/AuthLayout.tsx"
 import { Api, type Category, type Transaction } from "@/lib/utils.ts"
-import { useEffect, useMemo, useState, useCallback } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Field, FieldLabel } from "@/components/ui/field.tsx"
 import { Input } from "@/components/ui/input.tsx"
 import { Button } from "@/components/ui/button.tsx"
@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/tabs.tsx"
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { CategoryManager } from "@/components/internal/CategoryManager.tsx"
-import { Tag, Receipt } from "lucide-react"
+import { Receipt, Tag } from "lucide-react"
 
 export function Home() {
     const [selectedDeleteTransactionId, setSelectedDeleteTransactionId] =
@@ -56,6 +56,7 @@ export function Home() {
     const [description, setDescription] = useState<string>("")
     const [amount, setAmount] = useState<number>(0)
     const [isIncome, setIsIncome] = useState<boolean>(false)
+    const [isCC, setIsCC] = useState<boolean>(false)
     const [date, setDate] = useState<Date>()
     const [categoryId, setCategoryId] = useState<string>("")
     const [loadingCreate, setLoadingCreate] = useState<boolean>(false)
@@ -74,6 +75,16 @@ export function Home() {
         },
         {
             label: "Expense",
+            value: false,
+        },
+    ]
+    const isCCSelect = [
+        {
+            label: "Credit Card",
+            value: true,
+        },
+        {
+            label: "Cash/QRIS/Transfer",
             value: false,
         },
     ]
@@ -102,6 +113,7 @@ export function Home() {
                 category_id: categoryId,
                 is_income: isIncome,
                 date: date!.toISOString(),
+                is_cc: isCC,
             })
             const r = await getTransactions()
             setTransactions(r.data.data)
@@ -125,6 +137,7 @@ export function Home() {
         setDate(new Date(transaction.date))
         setCategoryId(transaction.category_id)
         setIsIncome(transaction.is_income)
+        setIsCC(transaction.is_cc)
     }
 
     const updateTransaction = async () => {
@@ -136,6 +149,7 @@ export function Home() {
                 category_id: categoryId,
                 is_income: isIncome,
                 date: date!.toISOString(),
+                is_cc: isCC,
             })
             const r = await getTransactions()
             setTransactions(r.data.data)
@@ -224,7 +238,7 @@ export function Home() {
                     className="mt-4 flex flex-col gap-4"
                 >
                     <div className="flex flex-col gap-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-3 gap-4">
                             <Field>
                                 <FieldLabel htmlFor="category">
                                     Category
@@ -275,6 +289,32 @@ export function Home() {
                                     <SelectContent>
                                         <SelectGroup>
                                             {isIncomeSelect.map((item) => (
+                                                <SelectItem
+                                                    key={item.label}
+                                                    value={item.value}
+                                                >
+                                                    {item.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
+                            <Field>
+                                <FieldLabel htmlFor="is_cc">Is CC</FieldLabel>
+                                <Select
+                                    items={isCCSelect}
+                                    onValueChange={(value) =>
+                                        setIsCC(Boolean(value))
+                                    }
+                                    defaultValue={false}
+                                >
+                                    <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            {isCCSelect.map((item) => (
                                                 <SelectItem
                                                     key={item.label}
                                                     value={item.value}
@@ -408,7 +448,7 @@ export function Home() {
                         </Card>
                     )}
                     {!isLoadingTransactions && (
-                        <div>
+                        <div className="flex flex-col-reverse">
                             {Object.entries(transactions).map(
                                 ([dateKey, items]) => (
                                     <div
@@ -435,10 +475,15 @@ export function Home() {
                                                                 )}
                                                             </span>
                                                             <div className="flex gap-2">
-                                                                <Badge variant="secondary">
-                                                                    {
-                                                                        transaction.category ? transaction.category.name : "Uncategorized"
-                                                                    }
+                                                                <Badge
+                                                                    variant="secondary"
+                                                                    className="capitalize"
+                                                                >
+                                                                    {transaction.category
+                                                                        ? transaction
+                                                                              .category
+                                                                              .name
+                                                                        : "Uncategorized"}
                                                                 </Badge>
                                                                 <Badge
                                                                     variant={
@@ -451,6 +496,12 @@ export function Home() {
                                                                         ? "Income"
                                                                         : "Expense"}
                                                                 </Badge>
+                                                                {transaction.is_cc && (
+                                                                    <Badge>
+                                                                        Credit
+                                                                        Card
+                                                                    </Badge>
+                                                                )}
                                                             </div>
                                                         </CardDescription>
                                                     </CardHeader>
@@ -506,7 +557,7 @@ export function Home() {
                                                             </Button>
                                                         </div>
                                                         <span className="text-xs text-muted-foreground">
-                                                            {transaction.date}
+                                                            {new Date(transaction.date).toLocaleTimeString()}
                                                         </span>
                                                     </CardFooter>
                                                 </Card>

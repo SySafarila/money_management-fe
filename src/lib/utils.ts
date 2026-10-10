@@ -51,6 +51,7 @@ export type TransactionCreateParam = {
     description: string
     is_income: boolean
     date: string
+    is_cc: boolean
 }
 
 export interface Transaction {
@@ -64,6 +65,7 @@ export interface Transaction {
     date: string
     category_id: string
     category: Category
+    is_cc: boolean
 }
 
 export type TransactionsResponse = {
