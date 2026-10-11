@@ -105,6 +105,10 @@ export function Home() {
     }, [amount, description, categoryId, date])
 
     const createTransaction = async () => {
+        const now = new Date()
+        const trxDate = date!
+        trxDate.setHours(now.getHours())
+        trxDate.setMinutes(now.getMinutes())
         try {
             setLoadingCreate(true)
             await Api.createTransaction({
@@ -112,7 +116,7 @@ export function Home() {
                 description: description,
                 category_id: categoryId,
                 is_income: isIncome,
-                date: date!.toISOString(),
+                date: trxDate!.toISOString(),
                 is_cc: isCC,
             })
             const r = await getTransactions()
@@ -141,6 +145,10 @@ export function Home() {
     }
 
     const updateTransaction = async () => {
+        const now = new Date()
+        const trxDate = date!
+        trxDate.setHours(now.getHours())
+        trxDate.setMinutes(now.getMinutes())
         try {
             setLoadingCreate(true)
             await Api.updateTransaction(selectedEditTransactionId!, {
@@ -148,7 +156,7 @@ export function Home() {
                 description: description,
                 category_id: categoryId,
                 is_income: isIncome,
-                date: date!.toISOString(),
+                date: trxDate.toISOString(),
                 is_cc: isCC,
             })
             const r = await getTransactions()
