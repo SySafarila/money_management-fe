@@ -19,7 +19,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover.tsx"
 import { Calendar } from "@/components/ui/calendar.tsx"
-import { format } from "date-fns"
+import { addDays, format } from "date-fns"
 import {
     Card,
     CardDescription,
@@ -36,6 +36,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton.tsx"
 import { CategoryManager } from "@/components/internal/CategoryManager.tsx"
 import { Receipt, Tag } from "lucide-react"
+import type { DateRange } from "react-day-picker"
 
 export function Home() {
     const [selectedDeleteTransactionId, setSelectedDeleteTransactionId] =
@@ -207,8 +208,55 @@ export function Home() {
             .catch(() => setIsLoadingTransactions(false))
     }, [])
 
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        to: addDays(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1), -1),
+    })
+
+    useEffect(() => {
+        if (dateRange) {
+            getTransactions()
+                .then((r) => {
+                    setTransactions(r.data.data)
+                    setIsLoadingTransactions(false)
+                })
+                .catch(() => setIsLoadingTransactions(false))
+        }
+    }, [dateRange])
+
     return (
         <AuthLayout>
+            <div>
+                <Field>
+                    <FieldLabel htmlFor="date">Date</FieldLabel>
+                    <Popover>
+                        <PopoverTrigger
+                            render={
+                                <Button
+                                    variant="outline"
+                                    data-empty={!date}
+                                    className="justify-start text-left font-normal data-[empty=true]:text-muted-foreground"
+                                />
+                            }
+                        >
+                            {dateRange ? (
+                                <span>{dateRange.from?.toLocaleDateString()} - {dateRange.to?.toLocaleDateString()}</span>
+                            ) : (
+                                <span>Pick a date range</span>
+                            )}
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={2}
+                            />
+                        </PopoverContent>
+                    </Popover>
+                </Field>
+            </div>
             <Tabs defaultValue="categories" className="w-full">
                 <TabsList className="grid w-full grid-cols-2" variant="line">
                     <TabsTrigger
@@ -565,7 +613,9 @@ export function Home() {
                                                             </Button>
                                                         </div>
                                                         <span className="text-xs text-muted-foreground">
-                                                            {new Date(transaction.date).toLocaleTimeString()}
+                                                            {new Date(
+                                                                transaction.date
+                                                            ).toLocaleTimeString()}
                                                         </span>
                                                     </CardFooter>
                                                 </Card>
