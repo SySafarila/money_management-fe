@@ -5,7 +5,8 @@ export { cn } from "cn"
 
 export const api = axios.create({
     baseURL:
-        import.meta.env.VITE_API_URL || "https://money-management-api.fsm.web.id",
+        import.meta.env.VITE_API_URL ||
+        "https://money-management-api.fsm.web.id",
 })
 
 // Attach x-api-key to every outgoing request
@@ -88,8 +89,19 @@ export class Api {
         return res.data
     }
 
-    static async getTransactions() {
-        return await api.get<TransactionsResponse>("/transactions")
+    static async getTransactions({
+        start_date,
+        end_date,
+    }: {
+        start_date: string
+        end_date: string
+    }) {
+        return await api.get<TransactionsResponse>("/transactions", {
+            params: {
+                start_date,
+                end_date,
+            },
+        })
     }
 
     static async createTransaction(transaction: TransactionCreateParam) {
@@ -135,7 +147,9 @@ export class Api {
     }
 
     static async deleteCategory(id: string): Promise<DeleteCategoryResponse> {
-        const res = await api.delete<DeleteCategoryResponse>(`/categories/${id}`)
+        const res = await api.delete<DeleteCategoryResponse>(
+            `/categories/${id}`
+        )
         return res.data
     }
 }

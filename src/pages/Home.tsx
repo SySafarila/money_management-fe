@@ -61,6 +61,13 @@ export function Home() {
     const [date, setDate] = useState<Date>()
     const [categoryId, setCategoryId] = useState<string>("")
     const [loadingCreate, setLoadingCreate] = useState<boolean>(false)
+    const [dateRange, setDateRange] = useState<DateRange | undefined>({
+        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+        to: addDays(
+            new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+            -1
+        ),
+    })
 
     const categoriesSelect = useMemo(() => {
         return categories.map((category) => ({
@@ -91,7 +98,25 @@ export function Home() {
     ]
 
     const getTransactions = async () => {
-        return await Api.getTransactions()
+        let startDate = new Date(
+            new Date().getFullYear(),
+            new Date().getMonth(),
+            1
+        )
+        let endDate = addDays(
+            new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+            -1
+        )
+        if (dateRange && dateRange.from) {
+            startDate = dateRange.from
+        }
+        if (dateRange && dateRange.to) {
+            endDate = dateRange.to
+        }
+        return await Api.getTransactions({
+            start_date: startDate.toISOString(),
+            end_date: endDate.toISOString(),
+        })
     }
 
     const createTransactionValidation = useMemo(() => {
@@ -169,6 +194,7 @@ export function Home() {
             setDate(undefined)
             setCategoryId("")
             setIsIncome(false)
+            setIsCC(false)
         } catch (error) {
             alert(error)
         } finally {
@@ -208,11 +234,6 @@ export function Home() {
             .catch(() => setIsLoadingTransactions(false))
     }, [])
 
-    const [dateRange, setDateRange] = useState<DateRange | undefined>({
-        from: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-        to: addDays(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1), -1),
-    })
-
     useEffect(() => {
         if (dateRange) {
             getTransactions()
@@ -240,7 +261,10 @@ export function Home() {
                             }
                         >
                             {dateRange ? (
-                                <span>{dateRange.from?.toLocaleDateString()} - {dateRange.to?.toLocaleDateString()}</span>
+                                <span>
+                                    {dateRange.from?.toLocaleDateString()} -{" "}
+                                    {dateRange.to?.toLocaleDateString()}
+                                </span>
                             ) : (
                                 <span>Pick a date range</span>
                             )}
