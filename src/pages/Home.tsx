@@ -249,7 +249,7 @@ export function Home() {
         <AuthLayout>
             <div>
                 <Field>
-                    <FieldLabel htmlFor="date">Date</FieldLabel>
+                    <FieldLabel htmlFor="dateRange">Date</FieldLabel>
                     <Popover>
                         <PopoverTrigger
                             render={
@@ -358,10 +358,12 @@ export function Home() {
                                 <FieldLabel htmlFor="amount">Type</FieldLabel>
                                 <Select
                                     items={isIncomeSelect}
-                                    onValueChange={(value) =>
-                                        setIsIncome(Boolean(value))
-                                    }
-                                    defaultValue={false}
+                                    value={isIncome}
+                                    onValueChange={(value) => {
+                                        if (typeof value === "boolean") {
+                                            setIsIncome(value)
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Type" />
@@ -384,10 +386,12 @@ export function Home() {
                                 <FieldLabel htmlFor="is_cc">Is CC</FieldLabel>
                                 <Select
                                     items={isCCSelect}
-                                    onValueChange={(value) =>
-                                        setIsCC(Boolean(value))
-                                    }
-                                    defaultValue={false}
+                                    value={isCC}
+                                    onValueChange={(value) => {
+                                        if (typeof value === "boolean") {
+                                            setIsCC(value)
+                                        }
+                                    }}
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder="Type" />
