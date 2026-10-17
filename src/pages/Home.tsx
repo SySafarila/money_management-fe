@@ -58,7 +58,7 @@ export function Home() {
     const [amount, setAmount] = useState<number>(0)
     const [isIncome, setIsIncome] = useState<boolean>(false)
     const [isCC, setIsCC] = useState<boolean>(false)
-    const [date, setDate] = useState<Date>()
+    const [date, setDate] = useState<Date>(new Date())
     const [categoryId, setCategoryId] = useState<string>("")
     const [loadingCreate, setLoadingCreate] = useState<boolean>(false)
     const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -123,12 +123,12 @@ export function Home() {
         const errors: string[] = []
 
         if (amount === 0) errors.push("Amount must be greater than 0")
-        if (description.length === 0 || description === "")
-            errors.push("Description required")
+        // if (description.length === 0 || description === "")
+        //     errors.push("Description required")
         if (categoryId === "") errors.push("Category required")
         if (!date) errors.push("Date required")
         return errors
-    }, [amount, description, categoryId, date])
+    }, [amount, categoryId, date])
 
     const createTransaction = async () => {
         const now = new Date()
@@ -137,9 +137,16 @@ export function Home() {
         trxDate.setMinutes(now.getMinutes())
         try {
             setLoadingCreate(true)
+            let selectedCategoryLabel = ''
+            for (let i = 0; i < categoriesSelect.length; i++) {
+                if (categoriesSelect[i].value === categoryId) {
+                    selectedCategoryLabel = categoriesSelect[i].label
+                    break
+                }
+            }
             await Api.createTransaction({
                 amount: amount,
-                description: description,
+                description: description === '' ? selectedCategoryLabel : description,
                 category_id: categoryId,
                 is_income: isIncome,
                 date: trxDate!.toISOString(),
@@ -147,11 +154,7 @@ export function Home() {
             })
             const r = await getTransactions()
             setTransactions(r.data.data)
-            setDescription("")
-            setAmount(0)
-            setDate(undefined)
-            setCategoryId("")
-            setIsIncome(false)
+            resetForm()
         } catch (error) {
             alert(error)
         } finally {
@@ -159,7 +162,20 @@ export function Home() {
         }
     }
 
+    const resetForm = () => {
+        setDescription("")
+        setAmount(0)
+        setDate(new Date())
+        setCategoryId("")
+        setIsIncome(false)
+        setIsCC(false)
+    }
+
     const editTransaction = (transaction: Transaction) => {
+        scrollTo({
+            top: 0,
+            behavior: "smooth",
+        })
         setIsEditMode(true)
         setSelectedEditTransactionId(transaction.id)
         setDescription(transaction.description)
@@ -187,14 +203,7 @@ export function Home() {
             })
             const r = await getTransactions()
             setTransactions(r.data.data)
-            setIsEditMode(false)
-            setSelectedEditTransactionId(null)
-            setDescription("")
-            setAmount(0)
-            setDate(undefined)
-            setCategoryId("")
-            setIsIncome(false)
-            setIsCC(false)
+            resetForm()
         } catch (error) {
             alert(error)
         } finally {
@@ -255,7 +264,7 @@ export function Home() {
                             render={
                                 <Button
                                     variant="outline"
-                                    data-empty={!date}
+                                    data-empty={!dateRange}
                                     className="justify-start text-left font-normal data-[empty=true]:text-muted-foreground"
                                 />
                             }
@@ -471,6 +480,7 @@ export function Home() {
                                     onClick={() => {
                                         setIsEditMode(false)
                                         setSelectedEditTransactionId(null)
+                                        resetForm()
                                     }}
                                     disabled={loadingCreate}
                                     variant="secondary"
